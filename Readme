@@ -1,0 +1,5 @@
+/arduino-ble-controller
+├── index.html          # Interfaz y lógica de control Web Bluetooth
+├── manifest.json       # Configuración de PWA para Android
+├── sketch.ino          # Código fuente para el microcontrolador
+└── README.md           # Documentación técnica
