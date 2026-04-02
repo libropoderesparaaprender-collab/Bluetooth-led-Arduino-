@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
+    <title>BLE LED Control | Enterprise Edition</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary: #2196F3; --dark: #1976D2; --error: #D32F2F; --success: #388E3C; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; }
+        button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-connect { background: var(--primary); color: white; }
+        .btn-on { background: var(--success); color: white; }
+        .btn-off { background: var(--error); color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { font-size: 0.85rem; color: #666; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Control LED BLE</h2>
+    <button id="connectBtn" class="btn-connect">CONECTAR DISPOSITIVO</button>
+    <hr>
+    <button id="onBtn" class="btn-on" disabled>ENCENDER LED (P13)</button>
+    <button id="offBtn" class="btn-off" disabled>APAGAR LED (P13)</button>
+    <div id="status">Estado: Desconectado</div>
+</div>
+
+<script>
+    // Configuración de UUIDs (Estándar para módulos BLE genéricos)
+    const SERVICE_UUID = 0xFFE0; 
+    const CHARACTERISTIC_UUID = 0xFFE1;
+
+    let bleCharacteristic = null;
+    let bleDevice = null;
+
+    const connectBtn = document.getElementById('connectBtn');
+    const onBtn = document.getElementById('onBtn');
+    const offBtn = document.getElementById('offBtn');
+    const statusLabel = document.getElementById('status');
+
+    async function requestDevice() {
+        try {
+            statusLabel.textContent = "Buscando dispositivo...";
+            bleDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [SERVICE_UUID] }]
+            });
+
+            const server = await bleDevice.gatt.connect();
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+            statusLabel.textContent = "Estado: Conectado a " + bleDevice.name;
+            toggleButtons(true);
+        } catch (error) {
+            console.error("Error de conexión:", error);
+            statusLabel.textContent = "Error: " + error.message;
+        }
+    }
+
+    async function sendCommand(value) {
+        if (!bleCharacteristic) return;
+        try {
+            const encoder = new TextEncoder();
+            await bleCharacteristic.writeValue(encoder.encode(value));
+            console.log(`Comando enviado: ${value}`);
+        } catch (error) {
+            statusLabel.textContent = "Error de envío: " + error.message;
+        }
+    }
+
+    function toggleButtons(connected) {
+        onBtn.disabled = !connected;
+        offBtn.disabled = !connected;
+        connectBtn.textContent = connected ? "DISPOSITIVO VINCULADO" : "CONECTAR DISPOSITIVO";
+        if(!connected) connectBtn.disabled = false;
+    }
+
+    connectBtn.addEventListener('click', requestDevice);
+    onBtn.addEventListener('click', () => sendCommand('1'));
+    offBtn.addEventListener('click', () => sendCommand('0'));
+</script>
+</body>
+</html>
